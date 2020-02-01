@@ -69,7 +69,7 @@ def post_detail(request, year, month, day, post):
             new_comment.post = post
             new_comment.save()
             return HttpResponseRedirect(request.path)
-            # Предотвращение повторной отправки формы
+            # Предотвращение повторной отправки формы 
         else:
             comment_form = CommentForm()
     else:
