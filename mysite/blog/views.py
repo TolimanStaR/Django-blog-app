@@ -5,22 +5,30 @@ from django.shortcuts import render, get_object_or_404
 from .models import Post, Comment
 from django.views.generic import ListView
 from .forms import EmailPostForm, CommentForm
+from taggit.models import Tag
 
 
-# def post_list(request):
-#     object_list = Post.published.all()
-#
-#     paginator = Paginator(object_list, 1)  # means 3 articles for each page
-#     page = request.GET.get('page')
-#
-#     try:
-#         posts = paginator.page(page)
-#     except PageNotAnInteger:
-#         posts = paginator.page(1)
-#     except EmptyPage:
-#         posts = paginator.page(paginator.num_pages)
-#
-#     return render(request, 'blog/post/list.html', {'page': page, 'posts': posts})
+def post_list(request, tag_slug=None):
+    object_list = Post.published.all()
+    tag = None
+
+    if tag_slug:
+        tag = get_object_or_404(Tag, slug=tag_slug)
+        object_list = object_list.filter(tags__in=[tag])
+
+    paginator = Paginator(object_list, 1)  # means 1 articles for each page
+    page = request.GET.get('page')
+
+    try:
+        posts = paginator.page(page)
+    except PageNotAnInteger:
+        posts = paginator.page(int(page // 1))
+    except EmptyPage:
+        posts = paginator.page(paginator.num_pages)
+
+    return render(request, 'blog/post/list.html', {'page': page,
+                                                   'posts': posts,
+                                                   'tag': tag})
 
 
 def post_share(request, post_id):
@@ -50,7 +58,7 @@ def post_share(request, post_id):
 class PostListView(ListView):
     queryset = Post.published.all()
     context_object_name = 'posts'
-    paginate_by = 1
+    paginate_by = 2
     template_name = 'blog/post/list.html'
 
 
@@ -69,7 +77,7 @@ def post_detail(request, year, month, day, post):
             new_comment.post = post
             new_comment.save()
             return HttpResponseRedirect(request.path)
-            # Предотвращение повторной отправки формы 
+            # Предотвращение повторной отправки формы
         else:
             comment_form = CommentForm()
     else:
