@@ -6,6 +6,7 @@ from .models import Post, Comment
 from django.views.generic import ListView
 from .forms import EmailPostForm, CommentForm
 from taggit.models import Tag
+from django.db.models import Count
 
 
 def post_list(request, tag_slug=None):
@@ -22,7 +23,7 @@ def post_list(request, tag_slug=None):
     try:
         posts = paginator.page(page)
     except PageNotAnInteger:
-        posts = paginator.page(int(page // 1))
+        posts = paginator.page(1)
     except EmptyPage:
         posts = paginator.page(paginator.num_pages)
 
@@ -83,8 +84,15 @@ def post_detail(request, year, month, day, post):
     else:
         comment_form = None  # затычка
 
+    post_tags_ids = post.tags.values_list('id', flat=True)
+    similar_posts = Post.published.filter(tags__in=post_tags_ids) \
+        .exclude(id=post.id)
+    similar_posts = similar_posts.annotate(same_tags=Count('tags')) \
+                        .order_by('-same_tags', '-publish')[:4]
+
     return render(request, 'blog/post/detail.html',
                   {'post': post,
                    'comments': comments,
                    'new_comment': new_comment,
-                   'comment_form': comment_form})
+                   'comment_form': comment_form,
+                   'similar_posts': similar_posts})
